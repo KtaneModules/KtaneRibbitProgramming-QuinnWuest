@@ -2771,7 +2771,7 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1925541186840642}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: -1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.014, z: 0.01}
   m_LocalScale: {x: 0.175, y: 0.175, z: 0.175}
   m_Children:
@@ -2782,7 +2782,7 @@ Transform:
   - {fileID: 4237402154603022}
   m_Father: {fileID: 4274506316384948}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &4458657638341312
 Transform:
   m_ObjectHideFlags: 1
@@ -6111,6 +6111,15 @@ MonoBehaviour:
   Module: {fileID: 114631324253372670}
   BombInfo: {fileID: 114569439735001756}
   Audio: {fileID: 114466794277322388}
+  InputSels:
+  - {fileID: 114238461565096076}
+  - {fileID: 114882371062233770}
+  - {fileID: 114520157222422928}
+  - {fileID: 114400636477656470}
+  - {fileID: 114035159541085432}
+  StartSel: {fileID: 114141940227553014}
+  ResetSel: {fileID: 114181956834340010}
+  DPadObject: {fileID: 1925541186840642}
 --- !u!114 &114400636477656470
 MonoBehaviour:
   m_ObjectHideFlags: 1
