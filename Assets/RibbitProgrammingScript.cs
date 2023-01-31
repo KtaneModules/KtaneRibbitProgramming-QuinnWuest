@@ -13,6 +13,10 @@ public class RibbitProgrammingScript : MonoBehaviour
     public KMBombInfo BombInfo;
     public KMAudio Audio;
 
+    public KMSelectable[] InputSels;
+    public KMSelectable StartSel;
+    public KMSelectable ResetSel;
+
     private int _moduleId;
     private static int _moduleIdCounter = 1;
     private bool _moduleSolved;
@@ -20,5 +24,30 @@ public class RibbitProgrammingScript : MonoBehaviour
     private void Start()
     {
         _moduleId = _moduleIdCounter++;
+        for (int i = 0; i < InputSels.Length; i++)
+            InputSels[i].OnInteract += InputPress(i);
+        StartSel.OnInteract += StartPress;
+        ResetSel.OnInteract += ResetPress;
+    }
+
+    private KMSelectable.OnInteractHandler InputPress(int i)
+    {
+        return delegate ()
+        {
+
+            return false;
+        };
+    }
+
+    private bool StartPress()
+    {
+
+        return false;
+    }
+
+    private bool ResetPress()
+    {
+
+        return false;
     }
 }
