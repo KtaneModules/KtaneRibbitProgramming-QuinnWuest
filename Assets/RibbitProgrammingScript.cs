@@ -40,6 +40,9 @@ public class RibbitProgrammingScript : MonoBehaviour
     private static int _moduleIdCounter = 1;
     private bool _moduleSolved;
 
+    private int _ribbitId;
+    private static int _ribbitIdCounter = 1;
+
     private Coroutine _dpadAnimation;
     private const float _dpadTiltAngle = 4f;
     private static readonly Vector3[] _dpadTiltDirs = new Vector3[] { new Vector3(_dpadTiltAngle, 0, 0), new Vector3(0, 0, -_dpadTiltAngle), new Vector3(-_dpadTiltAngle, 0, 0), new Vector3(0, 0, _dpadTiltAngle) };
@@ -68,10 +71,12 @@ public class RibbitProgrammingScript : MonoBehaviour
     private void Start()
     {
         _moduleId = _moduleIdCounter++;
+        _ribbitId = _ribbitIdCounter++;
+        Module.OnActivate += Activate;
         for (int i = 0; i < InputSels.Length; i++)
         {
-            InputSels[i].OnInteract += InputPress((Move) i);
-            InputSels[i].OnInteractEnded += InputRelease((Move) i);
+            InputSels[i].OnInteract += InputPress((Move)i);
+            InputSels[i].OnInteractEnded += InputRelease((Move)i);
         }
         StartSel.OnInteract += StartPress;
         ResetSel.OnInteract += ResetPress;
@@ -123,6 +128,17 @@ public class RibbitProgrammingScript : MonoBehaviour
                 }
             }
         }
+    }
+
+    private void Activate()
+    {
+        if (_ribbitId == 1)
+            Audio.PlaySoundAtTransform("Startup", transform);
+    }
+
+    private void OnDestroy()
+    {
+        _ribbitId = 0;
     }
 
     private void setX(SpriteRenderer sr, float x, int lane)
@@ -191,7 +207,7 @@ public class RibbitProgrammingScript : MonoBehaviour
             if (_dpadAnimation != null)
                 StopCoroutine(_dpadAnimation);
             if (move != Move.Idle)
-                _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, true));
+                _dpadAnimation = StartCoroutine(DPadPressAnimation((int)move, true));
 
             if (!_moduleSolved && !_programRunning && !_frogIsDead)
             {
@@ -218,7 +234,7 @@ public class RibbitProgrammingScript : MonoBehaviour
             if (_dpadAnimation != null)
                 StopCoroutine(_dpadAnimation);
             if (move != Move.Idle)
-                _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, false));
+                _dpadAnimation = StartCoroutine(DPadPressAnimation((int)move, false));
         };
     }
 
@@ -227,6 +243,7 @@ public class RibbitProgrammingScript : MonoBehaviour
         if (_programRunning || _moduleSolved || _frogIsDead)
             return false;
         _programStartTime = Time.time;
+        Debug.LogFormat("[Ribbit Programming #{0}] Entered program: {1}", _moduleId, _program.Select(i => i == Move.Idle ? '-' : i.ToString()[0]).ToArray().Join(""));
         StartCoroutine(Run());
         return false;
     }
@@ -234,17 +251,18 @@ public class RibbitProgrammingScript : MonoBehaviour
     private IEnumerator Run()
     {
         _programRunning = true;
+        Audio.PlaySoundAtTransform("PrepProgram", transform);
+        int mIx = -1;
         while (true)
         {
             var time = (Time.time - _programStartTime) * 1.4f;
             var frogX = 30f;
             var frogY = 100;
-            for (var ip = 0; ip < (int) time && ip < _program.Count; ip++)
+            for (var ip = 0; ip < (int)time && ip < _program.Count; ip++)
             {
-                var frgLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
+                var frgLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?)null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
                 if (frgLane != null && frgLane >= 4)
                     frogX = Math.Max(0, Math.Min(60, frogX + _speeds[frgLane.Value]));
-
                 switch (_program[ip])
                 {
                     case Move.Up:
@@ -254,6 +272,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogY -= 10;
+                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
                         break;
 
                     case Move.Right:
@@ -263,6 +282,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogX += 10;
+                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
                         break;
 
                     case Move.Down:
@@ -272,6 +292,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogY += 10;
+                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
                         break;
 
                     case Move.Left:
@@ -281,10 +302,11 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogX -= 10;
+                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
                         break;
 
                     case Move.Idle:
-                        if (ip >= 10 && _program.Skip(ip - 10).Take(10).All(instr => instr == Move.Idle))
+                        if (ip >= 5 && _program.Skip(ip - 5).Take(5).All(instr => instr == Move.Idle))
                         {
                             Debug.LogFormat("[Ribbit Programming #{0}] You died of boredom.", _moduleId);
                             goto dead;
@@ -302,7 +324,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                 goto dead;
             }
 
-            var frogLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
+            var frogLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?)null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
 
             var timeWithinUnit = time % 1;
 
@@ -316,6 +338,8 @@ public class RibbitProgrammingScript : MonoBehaviour
                     Debug.LogFormat("[Ribbit Programming #{0}] You died because you got hit by the {1} in lane {2}.", _moduleId, frogLane == _lorryLane ? "lorry" : "car", frogLane + 1);
                 else if (result == DeathResult.Drown)
                     Debug.LogFormat("[Ribbit Programming #{0}] You died because you jumped in the water in lane {1}.", _moduleId, frogLane + 1);
+                if (result == DeathResult.Roadkill || result == DeathResult.Drown)
+                    goto dead;
             }
 
             if (time >= _program.Count)
@@ -328,9 +352,10 @@ public class RibbitProgrammingScript : MonoBehaviour
                 if (!_moduleSolved)
                 {
                     Debug.LogFormat("[Ribbit Programming #{0}] Module solved!", _moduleId);
-                    frogX = (int) (frogX + 5) / 10 * 10;
+                    frogX = (int)(frogX + 5) / 10 * 10;
                     Module.HandlePass();
                     _moduleSolved = true;
+                    Audio.PlaySoundAtTransform("Solve", transform);
                 }
             }
 
@@ -341,6 +366,7 @@ public class RibbitProgrammingScript : MonoBehaviour
             dead:
             _frogIsDead = true;
             setupSprites(time, frogX, frogY, frogDead: true);
+            Audio.PlaySoundAtTransform("FrogDead", transform);
             if (!_avoidStrikeBecauseTpAutosolver)
                 Module.HandleStrike();
             break;
@@ -402,6 +428,11 @@ public class RibbitProgrammingScript : MonoBehaviour
             elapsed += Time.deltaTime;
         }
         DPadObject.transform.localEulerAngles = new Vector3(pressIn ? _dpadTiltDirs[btn].x : 0f, 0f, pressIn ? _dpadTiltDirs[btn].z : 0f);
+    }
+
+    private void PlayFrogMoveSound()
+    {
+        Audio.PlaySoundAtTransform("FrogMove", transform);
     }
 
 #pragma warning disable 0414
