@@ -6241,46 +6241,48 @@ MonoBehaviour:
   ResetSel: {fileID: 114181956834340010}
   DPadObject: {fileID: 1925541186840642}
   ProgramDisplay: {fileID: 102664715361259738}
-  _carSprites:
+  CarSprites:
   - {fileID: 21300000, guid: d61b9a20061143045b200ae20df3daac, type: 3}
   - {fileID: 21300000, guid: 509ee6064f187c84a96f83d3c8d1b7cb, type: 3}
   - {fileID: 21300000, guid: 7d16dd2ad98a4bc488f90951838932b3, type: 3}
   - {fileID: 21300000, guid: 2776c83873c3b304cb81ac24c59c45e0, type: 3}
-  _lorrySprite: {fileID: 21300000, guid: fb8bde52de76d5149812c5929eea0fd2, type: 3}
-  _logLSprite: {fileID: 21300000, guid: f65c04ecce82a7f4091103e450d9eedb, type: 3}
-  _logMSprite: {fileID: 21300000, guid: 66291141c70932844b38f5662da04ac5, type: 3}
-  _logRSprite: {fileID: 21300000, guid: 18ab35c43a0e3604881d3418e18f1659, type: 3}
-  _turtleSprite: {fileID: 21300000, guid: 3b53168fffe387a43bdc3a303749f5eb, type: 3}
-  _skullSprite: {fileID: 21300000, guid: 5b3bf0451483cbf41895807b442f7a02, type: 3}
-  _cars:
+  LorrySprite: {fileID: 21300000, guid: fb8bde52de76d5149812c5929eea0fd2, type: 3}
+  LogLSprite: {fileID: 21300000, guid: f65c04ecce82a7f4091103e450d9eedb, type: 3}
+  LogMSprite: {fileID: 21300000, guid: 66291141c70932844b38f5662da04ac5, type: 3}
+  LogRSprite: {fileID: 21300000, guid: 18ab35c43a0e3604881d3418e18f1659, type: 3}
+  TurtleSprite: {fileID: 21300000, guid: 3b53168fffe387a43bdc3a303749f5eb, type: 3}
+  FrogSprite: {fileID: 21300000, guid: ed3b9930285933d45b2c3273aac58286, type: 3}
+  SkullSprite: {fileID: 21300000, guid: 5b3bf0451483cbf41895807b442f7a02, type: 3}
+  Cars:
   - {fileID: 212206331605126670}
   - {fileID: 212447435787871738}
   - {fileID: 212209407782395024}
   - {fileID: 212054497009523482}
-  _logsTop:
+  LogsTop:
   - {fileID: 212947973037919718}
   - {fileID: 212212890899267268}
   - {fileID: 212185638548759466}
   - {fileID: 212941053408377702}
   - {fileID: 212330359009951418}
-  _logsBottom:
+  LogsBottom:
   - {fileID: 212830173515650250}
   - {fileID: 212497886187559428}
   - {fileID: 212127572561413804}
   - {fileID: 212426765226798606}
   - {fileID: 212037599231690494}
-  _turtlesTop:
+  TurtlesTop:
   - {fileID: 212535824635771920}
   - {fileID: 212170134756358350}
   - {fileID: 212313977850548340}
   - {fileID: 212142924935255914}
   - {fileID: 212046852392888658}
-  _turtlesBottom:
+  TurtlesBottom:
   - {fileID: 212105834322398926}
   - {fileID: 212732383847363796}
   - {fileID: 212998587565242604}
   - {fileID: 212623511241824408}
   - {fileID: 212682596516432018}
+  Frog: {fileID: 212033558489497148}
 --- !u!114 &114400636477656470
 MonoBehaviour:
   m_ObjectHideFlags: 1

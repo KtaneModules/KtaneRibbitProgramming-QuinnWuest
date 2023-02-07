@@ -20,19 +20,21 @@ public class RibbitProgrammingScript : MonoBehaviour
     public GameObject DPadObject;
     public TextMesh ProgramDisplay;
 
-    public Sprite[] _carSprites;
-    public Sprite _lorrySprite;
-    public Sprite _logLSprite;
-    public Sprite _logMSprite;
-    public Sprite _logRSprite;
-    public Sprite _turtleSprite;
-    public Sprite _skullSprite;
+    public Sprite[] CarSprites;
+    public Sprite LorrySprite;
+    public Sprite LogLSprite;
+    public Sprite LogMSprite;
+    public Sprite LogRSprite;
+    public Sprite TurtleSprite;
+    public Sprite FrogSprite;
+    public Sprite SkullSprite;
 
-    public SpriteRenderer[] _cars;
-    public SpriteRenderer[] _logsTop;
-    public SpriteRenderer[] _logsBottom;
-    public SpriteRenderer[] _turtlesTop;
-    public SpriteRenderer[] _turtlesBottom;
+    public SpriteRenderer[] Cars;
+    public SpriteRenderer[] LogsTop;
+    public SpriteRenderer[] LogsBottom;
+    public SpriteRenderer[] TurtlesTop;
+    public SpriteRenderer[] TurtlesBottom;
+    public SpriteRenderer Frog;
 
     private int _moduleId;
     private static int _moduleIdCounter = 1;
@@ -49,7 +51,10 @@ public class RibbitProgrammingScript : MonoBehaviour
     private readonly Sprite[] _overflowSprites = new Sprite[8];
     private readonly List<Move> _program = new List<Move>();
     private bool _programRunning;
-    private readonly SpriteRenderer[] _duplicates = new SpriteRenderer[8];   // for wraparound
+    private float _programStartTime;
+    private bool _frogIsDead;
+    private bool _avoidStrikeBecauseTpAutosolver;
+    private readonly SpriteRenderer[] _duplicates = new SpriteRenderer[9];   // for wraparound; index 8 is the frog
 
     enum Move
     {
@@ -75,7 +80,7 @@ public class RibbitProgrammingScript : MonoBehaviour
         for (var i = 0; i < 8; i++)
             _startingPositions[i] = Rnd.Range(0, 7) * 10;
         _lorryLane = Rnd.Range(0, 4);
-        _cars[_lorryLane].sprite = _lorrySprite;
+        Cars[_lorryLane].sprite = LorrySprite;
         for (var i = 0; i < 4; i++)
             _riverSizes[i] = Rnd.Range(2, 6);
 
@@ -91,22 +96,26 @@ public class RibbitProgrammingScript : MonoBehaviour
             var direction = -2 * (lane < 4 ? Rnd.Range(0, 2) : lane % 2) + 1;
             _speeds[lane] *= direction;
             if (lane < 4 && direction > 0)
-                setScaleX(_cars[lane].transform, -.095f);
+                setScaleX(Cars[lane].transform, -.095f);
         }
 
         setupSprites(0);
 
         for (var lane = 0; lane < 8; lane++)
         {
-            Debug.LogFormat(@"<RP> Lane {0}: start={1}, speed={2}, scaleX={3}, riverSize={4}",
-                lane, _startingPositions[lane], _speeds[lane], lane < 4 ? _cars[lane].transform.localScale.x.ToString() : "n/a", lane < 4 ? "n/a" : _riverSizes[lane - 4].ToString());
+            Debug.LogFormat(@"[Ribbit Programming #{4}] Lane {0}: {3}; start position {1}, speed {2}",
+                lane + 1,
+                _startingPositions[lane],
+                _speeds[lane],
+                lane == _lorryLane ? "lorry" : lane < 4 ? "car" : string.Format(lane == 4 || lane == 6 ? "log of length {0}" : "{0} turtles", _riverSizes[lane - 4]),
+                _moduleId);
 
             if (lane >= 4)
             {
                 var arr =
-                    lane == 4 ? _logsBottom :
-                    lane == 5 ? _turtlesBottom :
-                    lane == 6 ? _logsTop : _turtlesTop;
+                    lane == 4 ? LogsBottom :
+                    lane == 5 ? TurtlesBottom :
+                    lane == 6 ? LogsTop : TurtlesTop;
                 for (var i = _riverSizes[lane - 4]; i < arr.Length; i++)
                 {
                     Destroy(arr[i].gameObject);
@@ -132,8 +141,13 @@ public class RibbitProgrammingScript : MonoBehaviour
             _duplicates[lane].sprite = sr.sprite;
             _duplicates[lane].gameObject.SetActive(true);
         }
+    }
 
-        Debug.LogFormat(@"<RP> Lane {0}: setting X to {1} {2}", lane, x, _duplicates[lane] == null ? "no dup" : "YES DUP" + _duplicates[lane].transform.localPosition.x);
+    private void setY(SpriteRenderer sr, float y)
+    {
+        var pos = sr.transform.localPosition;
+        pos.z = .075f - .015f * y;
+        sr.transform.localPosition = pos;
     }
 
     private void setScaleX(Transform transform, float x)
@@ -143,7 +157,7 @@ public class RibbitProgrammingScript : MonoBehaviour
         transform.localScale = scale;
     }
 
-    private void setupSprites(float time)
+    private void setupSprites(float time, float frogX = 30, int frogY = 100, bool frogDead = false)
     {
         for (var lane = 0; lane < 8; lane++)
         {
@@ -151,20 +165,23 @@ public class RibbitProgrammingScript : MonoBehaviour
                 _duplicates[lane].gameObject.SetActive(false);
             var xPos = (((_startingPositions[lane] + time * _speeds[lane]) * .1f) % 7 + 7) % 7;
             if (lane < 4)   // car/lorry
-                setX(_cars[lane], xPos, lane);
+                setX(Cars[lane], xPos, lane);
             else    // log or turtles
             {
                 var arr =
-                    lane == 4 ? _logsBottom :
-                    lane == 5 ? _turtlesBottom :
-                    lane == 6 ? _logsTop : _turtlesTop;
+                    lane == 4 ? LogsBottom :
+                    lane == 5 ? TurtlesBottom :
+                    lane == 6 ? LogsTop : TurtlesTop;
                 for (var i = 0; i < _riverSizes[lane - 4]; i++)
                 {
-                    arr[i].sprite = lane % 2 != 0 ? _turtleSprite : i == 0 ? _logLSprite : i == _riverSizes[lane - 4] - 1 ? _logRSprite : _logMSprite;
+                    arr[i].sprite = lane % 2 != 0 ? TurtleSprite : i == 0 ? LogLSprite : i == _riverSizes[lane - 4] - 1 ? LogRSprite : LogMSprite;
                     setX(arr[i], (xPos + i) % 7, lane);
                 }
             }
         }
+        setX(Frog, frogX * .1f, 8);
+        setY(Frog, frogY * .1f);
+        Frog.sprite = frogDead ? SkullSprite : FrogSprite;
     }
 
     private KMSelectable.OnInteractHandler InputPress(Move move)
@@ -176,7 +193,7 @@ public class RibbitProgrammingScript : MonoBehaviour
             if (move != Move.Idle)
                 _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, true));
 
-            if (!_moduleSolved && !_programRunning)
+            if (!_moduleSolved && !_programRunning && !_frogIsDead)
             {
                 _program.Add(move);
                 updateProgramDisplay();
@@ -207,14 +224,162 @@ public class RibbitProgrammingScript : MonoBehaviour
 
     private bool StartPress()
     {
-
+        if (_programRunning || _moduleSolved || _frogIsDead)
+            return false;
+        _programStartTime = Time.time;
+        StartCoroutine(Run());
         return false;
+    }
+
+    private IEnumerator Run()
+    {
+        _programRunning = true;
+        while (true)
+        {
+            var time = (Time.time - _programStartTime) * 1.4f;
+            var frogX = 30f;
+            var frogY = 100;
+            for (var ip = 0; ip < (int) time && ip < _program.Count; ip++)
+            {
+                var frgLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
+                if (frgLane != null && frgLane >= 4)
+                    frogX = Math.Max(0, Math.Min(60, frogX + _speeds[frgLane.Value]));
+
+                switch (_program[ip])
+                {
+                    case Move.Up:
+                        if (frogY == 0)
+                        {
+                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved up from the top row.", _moduleId);
+                            goto dead;
+                        }
+                        frogY -= 10;
+                        break;
+
+                    case Move.Right:
+                        if (frogX == 60)
+                        {
+                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved right from the rightmost column.", _moduleId);
+                            goto dead;
+                        }
+                        frogX += 10;
+                        break;
+
+                    case Move.Down:
+                        if (frogY == 100)
+                        {
+                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved down from the bottom row.", _moduleId);
+                            goto dead;
+                        }
+                        frogY += 10;
+                        break;
+
+                    case Move.Left:
+                        if (frogX == 0)
+                        {
+                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved left from the leftmost column.", _moduleId);
+                            goto dead;
+                        }
+                        frogX -= 10;
+                        break;
+
+                    case Move.Idle:
+                        if (ip >= 10 && _program.Skip(ip - 10).Take(10).All(instr => instr == Move.Idle))
+                        {
+                            Debug.LogFormat("[Ribbit Programming #{0}] You died of boredom.", _moduleId);
+                            goto dead;
+                        }
+                        break;
+                }
+            }
+
+            if (frogY == 0 && !(
+                (frogX > 5 && frogX < 15) ||
+                (frogX > 25 && frogX < 35) ||
+                (frogX > 45 && frogX < 55)))
+            {
+                Debug.LogFormat("[Ribbit Programming #{0}] You died because you hit one of the barriers on the top row.", _moduleId);
+                goto dead;
+            }
+
+            var frogLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
+
+            var timeWithinUnit = time % 1;
+
+            if (frogLane != null)
+            {
+                if (frogLane.Value >= 4)
+                    frogX = Math.Max(0, Math.Min(60, frogX + (timeWithinUnit * _speeds[frogLane.Value])));
+
+                var result = doesFrogDie(time, frogX, frogLane.Value);
+                if (result == DeathResult.Roadkill)
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you got hit by the {1} in lane {2}.", _moduleId, frogLane == _lorryLane ? "lorry" : "car", frogLane + 1);
+                else if (result == DeathResult.Drown)
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you jumped in the water in lane {1}.", _moduleId, frogLane + 1);
+            }
+
+            if (time >= _program.Count)
+            {
+                if (frogY != 0)
+                {
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because the program ended before the frog reached a goal.", _moduleId);
+                    goto dead;
+                }
+                if (!_moduleSolved)
+                {
+                    Debug.LogFormat("[Ribbit Programming #{0}] Module solved!", _moduleId);
+                    frogX = (int) (frogX + 5) / 10 * 10;
+                    Module.HandlePass();
+                    _moduleSolved = true;
+                }
+            }
+
+            setupSprites(time, frogX, frogY);
+            yield return null;
+            continue;
+
+            dead:
+            _frogIsDead = true;
+            setupSprites(time, frogX, frogY, frogDead: true);
+            if (!_avoidStrikeBecauseTpAutosolver)
+                Module.HandleStrike();
+            break;
+        }
+        _programRunning = false;
+    }
+
+    enum DeathResult
+    {
+        Survive,
+        Roadkill,
+        Drown
+    }
+
+    private DeathResult doesFrogDie(float time, float frogX, int frogLane)
+    {
+        var itemX = ((_startingPositions[frogLane] + time * _speeds[frogLane]) % 70 + 70) % 70;
+        var itemWidth = frogLane == _lorryLane ? 20 : frogLane < 4 ? 10 : _riverSizes[frogLane - 4] * 10;
+        if (frogLane < 4)
+        {
+            if ((frogX + 10 > itemX && frogX < itemX + itemWidth) || (frogX + 10 > itemX - 70 && frogX < itemX + itemWidth - 70))
+                return DeathResult.Roadkill;
+        }
+        else
+        {
+            if (!((frogX + 10 > itemX && frogX < itemX + itemWidth) || (frogX + 10 > itemX - 70 && frogX < itemX + itemWidth - 70)))
+                return DeathResult.Drown;
+        }
+        return DeathResult.Survive;
     }
 
     private bool ResetPress()
     {
+        if (_programRunning || _moduleSolved)
+            return false;
         _program.Clear();
+        _frogIsDead = false;
         updateProgramDisplay();
+        setupSprites(0);
         return false;
     }
 
@@ -240,13 +405,55 @@ public class RibbitProgrammingScript : MonoBehaviour
     }
 
 #pragma warning disable 0414
-    private static readonly string TwitchHelpMessage = @"cuarenta y siete";
+    private static readonly string TwitchHelpMessage = @"!{0} UDL-R [enter program commands] | !{0} reset | !{0} start";
 #pragma warning restore 0414
 
     private IEnumerator ProcessTwitchCommand(string command)
     {
-        yield return null;
-        setupSprites(float.Parse(command));
-        yield break;
+        Match m;
+        if ((m = Regex.Match(command, @"^\s*([-udlr]+)\s*$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)).Success)
+        {
+            yield return null;
+            foreach (var ch in m.Groups[1].Value.ToUpperInvariant())
+            {
+                InputSels["URDL-".IndexOf(ch)].OnInteract();
+                yield return new WaitForSeconds(.05f);
+            }
+        }
+        else if (Regex.IsMatch(command, @"^\s*reset\s*$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
+        {
+            yield return null;
+            ResetSel.OnInteract();
+            yield return new WaitForSeconds(.1f);
+        }
+        else if (Regex.IsMatch(command, @"^\s*(start|go)\s*$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase))
+        {
+            yield return null;
+            StartSel.OnInteract();
+            yield return new WaitForSeconds(.1f);
+        }
+    }
+
+    struct QueueItem
+    {
+        public int Time;
+        public int FrogX;
+        public int FrogY;
+        public Move Move;
+    }
+
+    private IEnumerator TwitchHandleForcedSolve()
+    {
+        _avoidStrikeBecauseTpAutosolver = true;
+        while (_programRunning)
+            yield return true;
+        if (_moduleSolved)
+            yield break;
+
+        yield return new WaitForSeconds(.2f);
+        ResetSel.OnInteract();
+        yield return new WaitForSeconds(.1f);
+
+        var currentState = new QueueItem { FrogX = 30, FrogY = 100, Time = 0 };
     }
 }
