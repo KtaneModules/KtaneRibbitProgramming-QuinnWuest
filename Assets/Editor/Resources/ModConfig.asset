@@ -15,7 +15,8 @@ MonoBehaviour:
   title: Ribbit Programming
   author: Timwi, Quinn Wuest
   description: "Ever wondered if you could program a frog? You know... frogramming?\n\n\rModule
-    idea and programming by Timwi, visuals and sounds by Quinn Wuest.\n\r\n[url=http://ktane.timwi.de/PDF/Ribbit%20Programming.pdf]Manual
+    idea and programming by Timwi, visuals and sounds by Quinn Wuest.\n\nThis module
+    is an entry for the fourth KTANE modding jam (theme: retro).\n\r\n[url=http://ktane.timwi.de/PDF/Ribbit%20Programming.pdf]Manual
     PDF[/url]\r\n[url=http://ktane.timwi.de/HTML/Ribbit%20Programming.html]Manual
     HTML[/url]"
   version: 1.0
