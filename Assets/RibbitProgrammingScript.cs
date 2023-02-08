@@ -315,9 +315,9 @@ public class RibbitProgrammingScript : MonoBehaviour
             }
 
             if (frogY == 0 && !(
-                (frogX > 5 && frogX < 15) ||
-                (frogX > 25 && frogX < 35) ||
-                (frogX > 45 && frogX < 55)))
+                (frogX >= 5 && frogX <= 15) ||
+                (frogX >= 25 && frogX <= 35) ||
+                (frogX >= 45 && frogX <= 55)))
             {
                 Debug.LogFormat("[Ribbit Programming #{0}] You died because you hit one of the barriers on the top row.", _moduleId);
                 goto dead;
