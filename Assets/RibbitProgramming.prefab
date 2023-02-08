@@ -6252,6 +6252,7 @@ MonoBehaviour:
   LogRSprite: {fileID: 21300000, guid: 18ab35c43a0e3604881d3418e18f1659, type: 3}
   TurtleSprite: {fileID: 21300000, guid: 3b53168fffe387a43bdc3a303749f5eb, type: 3}
   FrogSprite: {fileID: 21300000, guid: ed3b9930285933d45b2c3273aac58286, type: 3}
+  FrogJumpSprite: {fileID: 21300000, guid: 80d7f4fea0f66af47b7e5d462d8528f8, type: 3}
   SkullSprite: {fileID: 21300000, guid: 5b3bf0451483cbf41895807b442f7a02, type: 3}
   Cars:
   - {fileID: 212206331605126670}

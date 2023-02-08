@@ -27,6 +27,7 @@ public class RibbitProgrammingScript : MonoBehaviour
     public Sprite LogRSprite;
     public Sprite TurtleSprite;
     public Sprite FrogSprite;
+    public Sprite FrogJumpSprite;
     public Sprite SkullSprite;
 
     public SpriteRenderer[] Cars;
