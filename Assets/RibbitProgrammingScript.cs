@@ -52,12 +52,10 @@ public class RibbitProgrammingScript : MonoBehaviour
     private int _lorryLane;
     private readonly int[] _speeds = new int[8];
     private readonly int[] _riverSizes = new int[4];
-    private readonly Sprite[] _overflowSprites = new Sprite[8];
     private readonly List<Move> _program = new List<Move>();
     private bool _programRunning;
     private float _programStartTime;
     private bool _frogIsDead;
-    private bool _avoidStrikeBecauseTpAutosolver;
     private readonly SpriteRenderer[] _duplicates = new SpriteRenderer[9];   // for wraparound; index 8 is the frog
 
     enum Move
@@ -76,8 +74,8 @@ public class RibbitProgrammingScript : MonoBehaviour
         Module.OnActivate += Activate;
         for (int i = 0; i < InputSels.Length; i++)
         {
-            InputSels[i].OnInteract += InputPress((Move)i);
-            InputSels[i].OnInteractEnded += InputRelease((Move)i);
+            InputSels[i].OnInteract += InputPress((Move) i);
+            InputSels[i].OnInteractEnded += InputRelease((Move) i);
         }
         StartSel.OnInteract += StartPress;
         ResetSel.OnInteract += ResetPress;
@@ -208,7 +206,7 @@ public class RibbitProgrammingScript : MonoBehaviour
             if (_dpadAnimation != null)
                 StopCoroutine(_dpadAnimation);
             if (move != Move.Idle)
-                _dpadAnimation = StartCoroutine(DPadPressAnimation((int)move, true));
+                _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, true));
 
             if (!_moduleSolved && !_programRunning && !_frogIsDead)
             {
@@ -235,7 +233,7 @@ public class RibbitProgrammingScript : MonoBehaviour
             if (_dpadAnimation != null)
                 StopCoroutine(_dpadAnimation);
             if (move != Move.Idle)
-                _dpadAnimation = StartCoroutine(DPadPressAnimation((int)move, false));
+                _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, false));
         };
     }
 
@@ -259,9 +257,9 @@ public class RibbitProgrammingScript : MonoBehaviour
             var time = (Time.time - _programStartTime) * 1.4f;
             var frogX = 30f;
             var frogY = 100;
-            for (var ip = 0; ip < (int)time && ip < _program.Count; ip++)
+            for (var ip = 0; ip < (int) time && ip < _program.Count; ip++)
             {
-                var frgLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?)null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
+                var frgLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
                 if (frgLane != null && frgLane >= 4)
                     frogX = Math.Max(0, Math.Min(60, frogX + _speeds[frgLane.Value]));
                 switch (_program[ip])
@@ -273,7 +271,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogY -= 10;
-                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
+                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 0, 0); PlayFrogMoveSound(); }
                         break;
 
                     case Move.Right:
@@ -283,7 +281,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogX += 10;
-                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
+                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 90, 0); PlayFrogMoveSound(); }
                         break;
 
                     case Move.Down:
@@ -293,7 +291,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogY += 10;
-                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
+                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 180, 0); PlayFrogMoveSound(); }
                         break;
 
                     case Move.Left:
@@ -303,7 +301,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                             goto dead;
                         }
                         frogX -= 10;
-                        if (mIx < ip) { mIx = ip; PlayFrogMoveSound(); }
+                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 270, 0); PlayFrogMoveSound(); }
                         break;
 
                     case Move.Idle:
@@ -325,7 +323,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                 goto dead;
             }
 
-            var frogLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?)null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
+            var frogLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
 
             var timeWithinUnit = time % 1;
 
@@ -350,10 +348,10 @@ public class RibbitProgrammingScript : MonoBehaviour
                     Debug.LogFormat("[Ribbit Programming #{0}] You died because the program ended before the frog reached a goal.", _moduleId);
                     goto dead;
                 }
+                frogX = (int) (frogX + 5) / 10 * 10;
                 if (!_moduleSolved)
                 {
                     Debug.LogFormat("[Ribbit Programming #{0}] Module solved!", _moduleId);
-                    frogX = (int)(frogX + 5) / 10 * 10;
                     Module.HandlePass();
                     _moduleSolved = true;
                     Audio.PlaySoundAtTransform("Solve", transform);
@@ -366,10 +364,10 @@ public class RibbitProgrammingScript : MonoBehaviour
 
             dead:
             _frogIsDead = true;
+            Frog.transform.localEulerAngles = new Vector3(90, 0, 0);
             setupSprites(time, frogX, frogY, frogDead: true);
             Audio.PlaySoundAtTransform("FrogDead", transform);
-            if (!_avoidStrikeBecauseTpAutosolver)
-                Module.HandleStrike();
+            Module.HandleStrike();
             break;
         }
         _programRunning = false;
@@ -464,28 +462,5 @@ public class RibbitProgrammingScript : MonoBehaviour
             StartSel.OnInteract();
             yield return new WaitForSeconds(.1f);
         }
-    }
-
-    struct QueueItem
-    {
-        public int Time;
-        public int FrogX;
-        public int FrogY;
-        public Move Move;
-    }
-
-    private IEnumerator TwitchHandleForcedSolve()
-    {
-        _avoidStrikeBecauseTpAutosolver = true;
-        while (_programRunning)
-            yield return true;
-        if (_moduleSolved)
-            yield break;
-
-        yield return new WaitForSeconds(.2f);
-        ResetSel.OnInteract();
-        yield return new WaitForSeconds(.1f);
-
-        var currentState = new QueueItem { FrogX = 30, FrogY = 100, Time = 0 };
     }
 }
