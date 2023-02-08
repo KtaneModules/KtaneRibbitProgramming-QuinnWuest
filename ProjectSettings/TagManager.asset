@@ -41,6 +41,3 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: RibbitProgramming
-    uniqueID: 3840184893
-    locked: 0

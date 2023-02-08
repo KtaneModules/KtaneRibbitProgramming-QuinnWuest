@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-[HelpURL("https://github.com/Qkrisi/ktanemodkit/wiki/KMRuleSeedable")]
 public class KMRuleSeedable : MonoBehaviour
 {
     [SerializeField]

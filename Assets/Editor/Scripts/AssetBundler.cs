@@ -29,7 +29,7 @@ public class AssetBundler
     /// <summary>
     /// List of managed assemblies to ignore in the build (because they already exist in KTaNE itself)
     /// </summary>
-    static List<string> EXCLUDED_ASSEMBLIES = new List<string> { "KMFramework.dll" };
+    static List<string> EXCLUDED_ASSEMBLIES = new List<string> { "KMFramework.dll", "Newtonsoft.Json.dll", "0Harmony.dll", "Camera.dll", "Google.ProtocolBuffers.dll", "I18N.dll", "I18N.West.dll", "log4net.dll", "PdfSharp.dll", "SonyNP.dll" };
 
     /// <summary>
     /// Location of MSBuild.exe tool
@@ -69,19 +69,32 @@ public class AssetBundler
     BuildTarget target = BuildTarget.StandaloneWindows;
     #endregion
 
+    protected enum AssemblyMode
+    {
+        None,
+        WithEditorUtility,
+        MSBuild
+    }
+
     [MenuItem("Keep Talking ModKit/Build AssetBundle _F6", priority = 10)]
     public static void BuildAllAssetBundles_WithEditorUtility()
     {
-        BuildModBundle(false);
+        BuildModBundle(AssemblyMode.WithEditorUtility);
     }
 
     [MenuItem("Keep Talking ModKit/Build AssetBundle (with MSBuild)", priority = 11)]
     public static void BuildAllAssetBundles_MSBuild()
     {
-        BuildModBundle(true);
+        BuildModBundle(AssemblyMode.MSBuild);
     }
 
-    protected static void BuildModBundle(bool useMSBuild)
+    [MenuItem("Keep Talking ModKit/Build AssetBundle (no assembly) _F7", priority = 12)]
+    public static void BuildAllAssetBundles_NoAssembly()
+    {
+        BuildModBundle(AssemblyMode.None);
+    }
+
+    protected static void BuildModBundle(AssemblyMode mode)
     {
         Debug.LogFormat("Creating \"{0}\" AssetBundle...", BUNDLE_FILENAME);
 
@@ -116,21 +129,23 @@ public class AssetBundler
             //Update material info components for future compatibility checks
             bundler.UpdateMaterialInfo();
 
+            bool UseHarmony = false;
+
             //Build the assembly using either MSBuild or Unity EditorUtility methods
-            if (useMSBuild)
+            if (mode == AssemblyMode.MSBuild)
             {
                 bundler.CompileAssemblyWithMSBuild();
             }
-            else
+            else if (mode == AssemblyMode.WithEditorUtility)
             {
                 bundler.CompileAssemblyWithEditor();
             }
 
             //Copy any other non-Editor managed assemblies to the output folder
-            bundler.CopyManagedAssemblies();
+            bundler.CopyManagedAssemblies(ref UseHarmony);
 
             //Create the modInfo.json file and copy the preview image if available
-            bundler.CreateModInfo();
+            bundler.CreateModInfo(UseHarmony);
 
             //Copy the modSettings.json file from Assets into the build
             bundler.CopyModSettings();
@@ -236,7 +251,7 @@ public class AssetBundler
             playerDefines += ";";
         }
 
-        string allDefines = playerDefines + "TRACE;UNITY_5_3_OR_NEWER;UNITY_5_3_5;UNITY_5_3;UNITY_5;UNITY_64;ENABLE_NEW_BUGREPORTER;ENABLE_AUDIO;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_DUCK_TYPING;ENABLE_FRAME_DEBUGGER;ENABLE_GENERICS;ENABLE_HOME_SCREEN;ENABLE_IMAGEEFFECTS;ENABLE_LIGHT_PROBES_LEGACY;ENABLE_MICROPHONE;ENABLE_MULTIPLE_DISPLAYS;ENABLE_PHYSICS;ENABLE_PLUGIN_INSPECTOR;ENABLE_SHADOWS;ENABLE_SINGLE_INSTANCE_BUILD_SETTING;ENABLE_SPRITERENDERER_FLIPPING;ENABLE_SPRITES;ENABLE_SPRITE_POLYGON;ENABLE_TERRAIN;ENABLE_RAKNET;ENABLE_UNET;ENABLE_UNITYEVENTS;ENABLE_VR;ENABLE_WEBCAM;ENABLE_WWW;ENABLE_CLOUD_SERVICES;ENABLE_CLOUD_SERVICES_ADS;ENABLE_CLOUD_HUB;ENABLE_CLOUD_PROJECT_ID;ENABLE_CLOUD_SERVICES_PURCHASING;ENABLE_CLOUD_SERVICES_ANALYTICS;ENABLE_CLOUD_SERVICES_UNET;ENABLE_CLOUD_SERVICES_BUILD;ENABLE_CLOUD_LICENSE;ENABLE_EDITOR_METRICS;ENABLE_EDITOR_METRICS_CACHING;INCLUDE_DYNAMIC_GI;INCLUDE_GI;INCLUDE_IL2CPP;INCLUDE_DIRECTX12;PLATFORM_SUPPORTS_MONO;RENDER_SOFTWARE_CURSOR;ENABLE_LOCALIZATION;ENABLE_ANDROID_ATLAS_ETC1_COMPRESSION;ENABLE_EDITOR_TESTS_RUNNER;UNITY_STANDALONE_WIN;UNITY_STANDALONE;ENABLE_SUBSTANCE;ENABLE_TEXTUREID_MAP;ENABLE_RUNTIME_GI;ENABLE_MOVIES;ENABLE_NETWORK;ENABLE_CRUNCH_TEXTURE_COMPRESSION;ENABLE_LOG_MIXED_STACKTRACE;ENABLE_UNITYWEBREQUEST;ENABLE_EVENT_QUEUE;ENABLE_CLUSTERINPUT;ENABLE_WEBSOCKET_HOST;ENABLE_MONO;ENABLE_PROFILER;DEBUG;TRACE;UNITY_ASSERTIONS";
+        string allDefines = playerDefines + "KMBUILD;TRACE;UNITY_5_3_OR_NEWER;UNITY_5_3_5;UNITY_5_3;UNITY_5;UNITY_64;ENABLE_NEW_BUGREPORTER;ENABLE_AUDIO;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_DUCK_TYPING;ENABLE_FRAME_DEBUGGER;ENABLE_GENERICS;ENABLE_HOME_SCREEN;ENABLE_IMAGEEFFECTS;ENABLE_LIGHT_PROBES_LEGACY;ENABLE_MICROPHONE;ENABLE_MULTIPLE_DISPLAYS;ENABLE_PHYSICS;ENABLE_PLUGIN_INSPECTOR;ENABLE_SHADOWS;ENABLE_SINGLE_INSTANCE_BUILD_SETTING;ENABLE_SPRITERENDERER_FLIPPING;ENABLE_SPRITES;ENABLE_SPRITE_POLYGON;ENABLE_TERRAIN;ENABLE_RAKNET;ENABLE_UNET;ENABLE_UNITYEVENTS;ENABLE_VR;ENABLE_WEBCAM;ENABLE_WWW;ENABLE_CLOUD_SERVICES;ENABLE_CLOUD_SERVICES_ADS;ENABLE_CLOUD_HUB;ENABLE_CLOUD_PROJECT_ID;ENABLE_CLOUD_SERVICES_PURCHASING;ENABLE_CLOUD_SERVICES_ANALYTICS;ENABLE_CLOUD_SERVICES_UNET;ENABLE_CLOUD_SERVICES_BUILD;ENABLE_CLOUD_LICENSE;ENABLE_EDITOR_METRICS;ENABLE_EDITOR_METRICS_CACHING;INCLUDE_DYNAMIC_GI;INCLUDE_GI;INCLUDE_IL2CPP;INCLUDE_DIRECTX12;PLATFORM_SUPPORTS_MONO;RENDER_SOFTWARE_CURSOR;ENABLE_LOCALIZATION;ENABLE_ANDROID_ATLAS_ETC1_COMPRESSION;ENABLE_EDITOR_TESTS_RUNNER;UNITY_STANDALONE_WIN;UNITY_STANDALONE;ENABLE_SUBSTANCE;ENABLE_TEXTUREID_MAP;ENABLE_RUNTIME_GI;ENABLE_MOVIES;ENABLE_NETWORK;ENABLE_CRUNCH_TEXTURE_COMPRESSION;ENABLE_LOG_MIXED_STACKTRACE;ENABLE_UNITYWEBREQUEST;ENABLE_EVENT_QUEUE;ENABLE_CLUSTERINPUT;ENABLE_WEBSOCKET_HOST;ENABLE_MONO;ENABLE_PROFILER;DEBUG;TRACE;UNITY_ASSERTIONS";
         string outputFilename = outputFolder + "/" + assemblyName + ".dll";
 
         List<string> managedReferences = AssetDatabase.GetAllAssetPaths()
@@ -244,21 +259,7 @@ public class AssetBundler
             .Select(path => "Assets/Plugins/Managed/" + Path.GetFileNameWithoutExtension(path))
             .ToList();
 
-        string unityAssembliesLocation;
-        switch (Application.platform)
-        {
-            case RuntimePlatform.OSXEditor:
-                unityAssembliesLocation = EditorApplication.applicationPath + "/Contents/Managed/";
-                break;
-            case RuntimePlatform.LinuxEditor:
-            case RuntimePlatform.WindowsEditor:
-            default:
-                unityAssembliesLocation = Path.Combine(Path.GetDirectoryName(EditorApplication.applicationPath), @"Data/Managed/");
-                break;
-        }
-
-        managedReferences.Add(unityAssembliesLocation + "UnityEngine");
-        managedReferences.Add(unityAssembliesLocation + "../UnityExtensions/Unity/GUISystem/UnityEngine.UI");
+        managedReferences.Add(Path.Combine(EditorApplication.applicationContentsPath, "Managed/UnityEngine"));
 
         //Next we need to grab some type references and use reflection to build things the way Unity does.
         //Note that EditorUtility.CompileCSharp will do *almost* exactly the same thing, but it unfortunately
@@ -288,18 +289,18 @@ public class AssetBundler
 
         //Start compiling
         beginCompilingMethod.Invoke(monoCompiler, null);
-        while (!(bool)pollMethod.Invoke(monoCompiler, null))
+        while (!(bool) pollMethod.Invoke(monoCompiler, null))
         {
             System.Threading.Thread.Sleep(50);
         }
 
         //Now check and output any messages returned by the compiler
         object returnedObj = getMessagesMethod.Invoke(monoCompiler, null);
-        object[] cmArray = ((Array)returnedObj).Cast<object>().ToArray();
+        object[] cmArray = ((Array) returnedObj).Cast<object>().ToArray();
 
         foreach (object cm in cmArray)
         {
-            string str = (string)messageField.GetValue(cm);
+            string str = (string) messageField.GetValue(cm);
             Debug.LogFormat("Compiler: {0}", str);
         }
 
@@ -386,7 +387,7 @@ public class AssetBundler
     /// <summary>
     /// Copy all managed non-Editor assemblies to the OUTPUT_FOLDER for inclusion alongside the mod bundle.
     /// </summary>
-    protected void CopyManagedAssemblies()
+    protected void CopyManagedAssemblies(ref bool UseHarmony)
     {
         IEnumerable<string> assetPaths = AssetDatabase.GetAllAssetPaths().Where(path => path.EndsWith(".dll") && path.StartsWith("Assets/Plugins"));
 
@@ -398,6 +399,8 @@ public class AssetBundler
             if (pluginImporter != null && !pluginImporter.isNativePlugin && pluginImporter.GetCompatibleWithAnyPlatform())
             {
                 string assetName = Path.GetFileName(assetPath);
+                if (assetName == "0Harmony.dll")
+                    UseHarmony = true;
                 if (!EXCLUDED_ASSEMBLIES.Contains(assetName))
                 {
                     string dest = Path.Combine(outputFolder, Path.GetFileName(assetPath));
@@ -443,9 +446,9 @@ public class AssetBundler
     /// <summary>
     /// Creates a modInfo.json file and puts it in the OUTPUT_FOLDER.
     /// </summary>
-    protected void CreateModInfo()
+    protected void CreateModInfo(bool UseHarmony)
     {
-        File.WriteAllText(outputFolder + "/modInfo.json", ModConfig.Instance.ToJson());
+        File.WriteAllText(outputFolder + (UseHarmony ? "/modInfo_Harmony.json" : "/modInfo.json"), ModConfig.Instance.ToJson());
 
         if (ModConfig.PreviewImage != null)
         {
