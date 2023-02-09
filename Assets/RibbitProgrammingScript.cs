@@ -205,6 +205,8 @@ public class RibbitProgrammingScript : MonoBehaviour
         {
             if (_dpadAnimation != null)
                 StopCoroutine(_dpadAnimation);
+            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonRelease, InputSels[(int)move].transform);
+            InputSels[(int)move].AddInteractionPunch(0.25f);
             if (move != Move.Idle)
                 _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, true));
 
@@ -241,6 +243,8 @@ public class RibbitProgrammingScript : MonoBehaviour
     {
         if (_programRunning || _moduleSolved || _frogIsDead)
             return false;
+        StartSel.AddInteractionPunch(0.5f);
+        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, StartSel.transform);
         _programStartTime = Time.time;
         Debug.LogFormat("[Ribbit Programming #{0}] Entered program: {1}", _moduleId, _program.Select(i => i == Move.Idle ? '-' : i.ToString()[0]).ToArray().Join(""));
         StartCoroutine(Run());
@@ -401,6 +405,8 @@ public class RibbitProgrammingScript : MonoBehaviour
     {
         if (_programRunning || _moduleSolved)
             return false;
+        ResetSel.AddInteractionPunch(0.5f);
+        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, ResetSel.transform);
         _program.Clear();
         _frogIsDead = false;
         updateProgramDisplay();
