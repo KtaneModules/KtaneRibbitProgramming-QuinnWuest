@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEngine;
 using KModkit;
+using UnityEngine;
 
 using Rnd = UnityEngine.Random;
 
@@ -56,6 +56,7 @@ public class RibbitProgrammingScript : MonoBehaviour
     private bool _programRunning;
     private float _programStartTime;
     private bool _frogIsDead;
+    private bool _tpAutosolved;
     private readonly SpriteRenderer[] _duplicates = new SpriteRenderer[9];   // for wraparound; index 8 is the frog
 
     enum Move
@@ -176,8 +177,7 @@ public class RibbitProgrammingScript : MonoBehaviour
     {
         for (var lane = 0; lane < 8; lane++)
         {
-            if (_duplicates[lane] != null)
-                _duplicates[lane].gameObject.SetActive(false);
+            _duplicates[lane]?.gameObject.SetActive(false);
             var xPos = (((_startingPositions[lane] + time * _speeds[lane]) * .1f) % 7 + 7) % 7;
             if (lane < 4)   // car/lorry
                 setX(Cars[lane], xPos, lane);
@@ -205,8 +205,8 @@ public class RibbitProgrammingScript : MonoBehaviour
         {
             if (_dpadAnimation != null)
                 StopCoroutine(_dpadAnimation);
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonRelease, InputSels[(int)move].transform);
-            InputSels[(int)move].AddInteractionPunch(0.25f);
+            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonRelease, InputSels[(int) move].transform);
+            InputSels[(int) move].AddInteractionPunch(0.25f);
             if (move != Move.Idle)
                 _dpadAnimation = StartCoroutine(DPadPressAnimation((int) move, true));
 
@@ -255,133 +255,233 @@ public class RibbitProgrammingScript : MonoBehaviour
     {
         _programRunning = true;
         Audio.PlaySoundAtTransform("PrepProgram", transform);
-        int mIx = -1;
+        int mostRecentlyExecutedInstruction = -1;
         while (true)
         {
             var time = (Time.time - _programStartTime) * 1.4f;
-            var frogX = 30f;
-            var frogY = 100;
-            for (var ip = 0; ip < (int) time && ip < _program.Count; ip++)
+            var result = CheckProgram(_program, time, mostRecentlyExecutedInstruction);
+            mostRecentlyExecutedInstruction = result.MostRecentlyExecutedInstruction;
+
+            switch (result.DeathResult)
             {
-                var frgLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
-                if (frgLane != null && frgLane >= 4)
-                    frogX = Math.Max(0, Math.Min(60, frogX + _speeds[frgLane.Value]));
-                switch (_program[ip])
-                {
-                    case Move.Up:
-                        if (frogY == 0)
-                        {
-                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved up from the top row.", _moduleId);
-                            goto dead;
-                        }
-                        frogY -= 10;
-                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 0, 0); PlayFrogMoveSound(); }
-                        break;
-
-                    case Move.Right:
-                        if (frogX == 60)
-                        {
-                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved right from the rightmost column.", _moduleId);
-                            goto dead;
-                        }
-                        frogX += 10;
-                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 90, 0); PlayFrogMoveSound(); }
-                        break;
-
-                    case Move.Down:
-                        if (frogY == 100)
-                        {
-                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved down from the bottom row.", _moduleId);
-                            goto dead;
-                        }
-                        frogY += 10;
-                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 180, 0); PlayFrogMoveSound(); }
-                        break;
-
-                    case Move.Left:
-                        if (frogX == 0)
-                        {
-                            Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved left from the leftmost column.", _moduleId);
-                            goto dead;
-                        }
-                        frogX -= 10;
-                        if (mIx < ip) { mIx = ip; Frog.transform.localEulerAngles = new Vector3(90, 270, 0); PlayFrogMoveSound(); }
-                        break;
-
-                    case Move.Idle:
-                        if (ip >= 5 && _program.Skip(ip - 5).Take(5).All(instr => instr == Move.Idle))
-                        {
-                            Debug.LogFormat("[Ribbit Programming #{0}] You died of boredom.", _moduleId);
-                            goto dead;
-                        }
-                        break;
-                }
-            }
-
-            if (frogY == 0 && !(
-                (frogX >= 5 && frogX <= 15) ||
-                (frogX >= 25 && frogX <= 35) ||
-                (frogX >= 45 && frogX <= 55)))
-            {
-                Debug.LogFormat("[Ribbit Programming #{0}] You died because you hit one of the barriers on the top row.", _moduleId);
-                goto dead;
-            }
-
-            var frogLane = frogY == 0 || frogY == 50 || frogY == 100 ? (int?) null : frogY < 50 ? (8 - frogY / 10) : (9 - frogY / 10);
-
-            var timeWithinUnit = time % 1;
-
-            if (frogLane != null)
-            {
-                if (frogLane.Value >= 4)
-                    frogX = Math.Max(0, Math.Min(60, frogX + (timeWithinUnit * _speeds[frogLane.Value])));
-
-                var result = doesFrogDie(time, frogX, frogLane.Value);
-                if (result == DeathResult.Roadkill)
-                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you got hit by the {1} in lane {2}.", _moduleId, frogLane == _lorryLane ? "lorry" : "car", frogLane + 1);
-                else if (result == DeathResult.Drown)
-                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you jumped in the water in lane {1}.", _moduleId, frogLane + 1);
-                if (result == DeathResult.Roadkill || result == DeathResult.Drown)
+                case DeathResult.HitTopEdge:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved up from the top row.", _moduleId);
                     goto dead;
-            }
-
-            if (time >= _program.Count)
-            {
-                if (frogY != 0)
-                {
+                case DeathResult.HitRightEdge:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved right from the rightmost column.", _moduleId);
+                    goto dead;
+                case DeathResult.HitBottomEdge:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved down from the bottom row.", _moduleId);
+                    goto dead;
+                case DeathResult.HitLeftEdge:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you moved left from the leftmost column.", _moduleId);
+                    goto dead;
+                case DeathResult.Boredom:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died of boredom.", _moduleId);
+                    goto dead;
+                case DeathResult.HitBarrier:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you hit one of the barriers on the top row.", _moduleId);
+                    goto dead;
+                case DeathResult.Roadkill:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you got hit by the {1} in lane {2}.", _moduleId, result.FrogLane == _lorryLane ? "lorry" : "car", result.FrogLane + 1);
+                    goto dead;
+                case DeathResult.Drown:
+                    Debug.LogFormat("[Ribbit Programming #{0}] You died because you jumped in the water in lane {1}.", _moduleId, result.FrogLane + 1);
+                    goto dead;
+                case DeathResult.ProgramRanOut:
                     Debug.LogFormat("[Ribbit Programming #{0}] You died because the program ended before the frog reached a goal.", _moduleId);
                     goto dead;
-                }
-                frogX = (int) (frogX + 5) / 10 * 10;
-                if (!_moduleSolved)
-                {
-                    Debug.LogFormat("[Ribbit Programming #{0}] Module solved!", _moduleId);
-                    Module.HandlePass();
-                    _moduleSolved = true;
-                    Audio.PlaySoundAtTransform("Solve", transform);
-                }
             }
 
-            setupSprites(time, frogX, frogY);
+            if (result.NewFrogAngle != null)
+            {
+                Frog.transform.localEulerAngles = new Vector3(90, result.NewFrogAngle.Value, 0);
+                PlayFrogMoveSound();
+            }
+
+            if (result.Solved && !_moduleSolved)
+            {
+                Debug.LogFormat("[Ribbit Programming #{0}] Module solved!", _moduleId);
+                Module.HandlePass();
+                _moduleSolved = true;
+                Audio.PlaySoundAtTransform("Solve", transform);
+            }
+
+            setupSprites(time, result.FrogX, result.FrogY);
             yield return null;
             continue;
 
             dead:
             _frogIsDead = true;
             Frog.transform.localEulerAngles = new Vector3(90, 0, 0);
-            setupSprites(time, frogX, frogY, frogDead: true);
+            setupSprites(time, result.FrogX, result.FrogY, frogDead: true);
             Audio.PlaySoundAtTransform("FrogDead", transform);
-            Module.HandleStrike();
+            if (!_tpAutosolved)
+                Module.HandleStrike();
             break;
         }
         _programRunning = false;
+    }
+
+    struct CheckProgramResult
+    {
+        public int? NewFrogAngle;
+        public float FrogX;
+        public int FrogY;
+        public int? FrogLane;
+        public DeathResult DeathResult;
+        public int MostRecentlyExecutedInstruction;
+        public bool Solved;
+
+        public override string ToString() => $"{(Solved ? "✓" : "✗")}, {DeathResult}, {FrogX}, {FrogY}, {FrogLane?.ToString() ?? "(n)"}, {MostRecentlyExecutedInstruction}, {NewFrogAngle}";
+    }
+
+    private CheckProgramResult CheckProgram(List<Move> program, float time, int mostRecentInstr)
+    {
+        var result = new CheckProgramResult();
+        result.FrogX = 30f;
+        result.FrogY = 100;
+        result.MostRecentlyExecutedInstruction = mostRecentInstr;
+        for (var ip = 0; ip < (int) time && ip < program.Count; ip++)
+        {
+            var frogLane = result.FrogY == 0 || result.FrogY == 50 || result.FrogY == 100 ? (int?) null : result.FrogY < 50 ? (8 - result.FrogY / 10) : (9 - result.FrogY / 10);
+            if (frogLane != null && frogLane >= 4)
+                result.FrogX = Math.Max(0, Math.Min(60, result.FrogX + _speeds[frogLane.Value]));
+
+            var prematureDeath = frogLane == null ? DeathResult.Survive : doesFrogDie(ip + 1, result.FrogX, frogLane.Value);
+            if (prematureDeath != DeathResult.Survive)
+            {
+                result.DeathResult = prematureDeath;
+                return result;
+            }
+
+            switch (program[ip])
+            {
+                case Move.Up:
+                    if (result.FrogY == 0)
+                    {
+                        result.DeathResult = DeathResult.HitTopEdge;
+                        return result;
+                    }
+                    result.FrogY -= 10;
+                    if (result.MostRecentlyExecutedInstruction < ip)
+                    {
+                        result.MostRecentlyExecutedInstruction = ip;
+                        result.NewFrogAngle = 0;
+                    }
+                    break;
+
+                case Move.Right:
+                    if (result.FrogX == 60)
+                    {
+                        result.DeathResult = DeathResult.HitRightEdge;
+                        return result;
+                    }
+                    result.FrogX += 10;
+                    if (result.MostRecentlyExecutedInstruction < ip)
+                    {
+                        result.MostRecentlyExecutedInstruction = ip;
+                        result.NewFrogAngle = 90;
+                    }
+                    break;
+
+                case Move.Down:
+                    if (result.FrogY == 100)
+                    {
+                        result.DeathResult = DeathResult.HitBottomEdge;
+                        return result;
+                    }
+                    result.FrogY += 10;
+                    if (result.MostRecentlyExecutedInstruction < ip)
+                    {
+                        result.MostRecentlyExecutedInstruction = ip;
+                        result.NewFrogAngle = 180;
+                    }
+                    break;
+
+                case Move.Left:
+                    if (result.FrogX == 0)
+                    {
+                        result.DeathResult = DeathResult.HitLeftEdge;
+                        return result;
+                    }
+                    result.FrogX -= 10;
+                    if (result.MostRecentlyExecutedInstruction < ip)
+                    {
+                        result.MostRecentlyExecutedInstruction = ip;
+                        result.NewFrogAngle = 270;
+                    }
+                    break;
+
+                case Move.Idle:
+                    if (ip >= 5 && program.Skip(ip - 5).Take(5).All(instr => instr == Move.Idle))
+                    {
+                        result.DeathResult = DeathResult.Boredom;
+                        return result;
+                    }
+                    break;
+            }
+        }
+
+        if (result.FrogY == 0 && !(
+            (result.FrogX >= 5 && result.FrogX <= 15) ||
+            (result.FrogX >= 25 && result.FrogX <= 35) ||
+            (result.FrogX >= 45 && result.FrogX <= 55)))
+        {
+            result.DeathResult = DeathResult.HitBarrier;
+            return result;
+        }
+
+        result.FrogLane = result.FrogY == 0 || result.FrogY == 50 || result.FrogY == 100 ? (int?) null : result.FrogY < 50 ? (8 - result.FrogY / 10) : (9 - result.FrogY / 10);
+
+        var timeWithinUnit = time % 1;
+
+        if (result.FrogLane != null)
+        {
+            if (result.FrogLane.Value >= 4)
+                result.FrogX = Math.Max(0, Math.Min(60, result.FrogX + (timeWithinUnit * _speeds[result.FrogLane.Value])));
+
+            var dResult = doesFrogDie(time, result.FrogX, result.FrogLane.Value);
+            if (dResult == DeathResult.Roadkill || dResult == DeathResult.Drown)
+            {
+                result.DeathResult = dResult;
+                return result;
+            }
+        }
+
+        if (time >= program.Count)
+        {
+            if (result.FrogY != 0)
+            {
+                result.DeathResult = DeathResult.ProgramRanOut;
+                return result;
+            }
+
+            // We want to allow x coordinates from 5 to 15 to all count as valid.
+            // This formula turns 5–14 into 1, but 15 becomes 2, ...
+            var tempX = (int) (result.FrogX + 5) / 10;
+            // ... so if the result was even, subtract one to obtain the position of the goal we actually reached
+            if (tempX % 2 == 0)
+                tempX--;
+
+            result.FrogX = tempX * 10;
+            result.Solved = true;
+        }
+        return result;
     }
 
     enum DeathResult
     {
         Survive,
         Roadkill,
-        Drown
+        Drown,
+        HitTopEdge,
+        HitRightEdge,
+        HitBottomEdge,
+        HitLeftEdge,
+        Boredom,
+        HitBarrier,
+        ProgramRanOut
     }
 
     private DeathResult doesFrogDie(float time, float frogX, int frogLane)
@@ -468,5 +568,100 @@ public class RibbitProgrammingScript : MonoBehaviour
             StartSel.OnInteract();
             yield return new WaitForSeconds(.1f);
         }
+    }
+
+    struct VisitedItem : IEquatable<VisitedItem>
+    {
+        public int Time;
+        public int FrogX;
+        public int FrogY;
+
+        public bool Equals(VisitedItem other) => Time == other.Time && FrogX == other.FrogX && FrogY == other.FrogY;
+        public override bool Equals(object obj) => obj is VisitedItem && Equals((VisitedItem) obj);
+        public override int GetHashCode() => (Time * 47 + FrogX) * 47 + FrogY;
+    }
+
+    private IEnumerator TwitchHandleForcedSolve()
+    {
+        while (_programRunning)
+            yield return true;
+
+        if (_moduleSolved)
+            yield break;
+
+        if (_frogIsDead || _program.Count > 0)
+        {
+            ResetSel.OnInteract();
+            yield return new WaitForSeconds(.1f);
+        }
+
+        var program = new List<Move>();
+        for (var allowedDowns = 0; allowedDowns < 2; allowedDowns++)
+        {
+            var hasReachedMiddleStrip = false;
+            var queue = new Queue<string>();
+            queue.Enqueue("");
+
+            var visited = new HashSet<VisitedItem>();
+
+            while (queue.Count > 0)
+            {
+                var programStr = queue.Dequeue();
+
+                program.Clear();
+                program.AddRange(programStr.Select(ch =>
+                    ch == 'U' ? Move.Up :
+                    ch == 'D' ? Move.Down :
+                    ch == 'L' ? Move.Left :
+                    ch == 'R' ? Move.Right : Move.Idle));
+
+                var initialResult = CheckProgram(program, program.Count, -1);
+                var visitedItem = new VisitedItem { Time = program.Count, FrogX = Mathf.RoundToInt(10 * initialResult.FrogX), FrogY = initialResult.FrogY };
+                if (visited.Contains(visitedItem))
+                    continue;
+                visited.Add(visitedItem);
+
+                if (!hasReachedMiddleStrip && initialResult.FrogY >= 50)
+                {
+                    hasReachedMiddleStrip = true;
+                    queue.Clear();
+                }
+
+                foreach (var nextMove in new[] { Move.Idle, Move.Up, Move.Left, Move.Right, Move.Down })
+                {
+                    if (nextMove == Move.Down && program.Count(m => m == Move.Down) >= allowedDowns)
+                        continue;
+
+                    program.Add(nextMove);
+
+                    for (var fractionalTime = 0f; fractionalTime <= 1; fractionalTime += .25f)
+                    {
+                        var result = CheckProgram(program, program.Count + fractionalTime, -1);
+                        if (result.Solved)
+                            goto found;
+
+                        if (result.DeathResult != DeathResult.Survive && result.DeathResult != DeathResult.ProgramRanOut)
+                            goto busted;
+                    }
+
+                    queue.Enqueue(program.Select(move => "URDL-"[(int) move]).Join(""));
+
+                    busted:
+                    program.RemoveAt(program.Count - 1);
+                }
+            }
+        }
+        throw new InvalidOperationException("It appears that this module is unsolvable?!");
+
+        found:
+        foreach (var move in program)
+        {
+            InputSels[(int) move].OnInteract();
+            yield return new WaitForSeconds(.1f);
+        }
+
+        StartSel.OnInteract();
+        while (!_moduleSolved)
+            yield return true;
     }
 }
