@@ -583,6 +583,8 @@ public class RibbitProgrammingScript : MonoBehaviour
 
     private IEnumerator TwitchHandleForcedSolve()
     {
+        _tpAutosolved = true;
+
         while (_programRunning)
             yield return true;
 
