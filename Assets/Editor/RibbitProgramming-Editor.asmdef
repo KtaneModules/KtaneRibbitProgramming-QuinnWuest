@@ -1,0 +1,10 @@
+{
+  "name": "RibbitProgramming-Editor",
+  "references": [
+    "RibbitProgramming"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": []
+}

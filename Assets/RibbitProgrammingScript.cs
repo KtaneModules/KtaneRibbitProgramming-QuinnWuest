@@ -414,7 +414,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                     break;
 
                 case Move.Idle:
-                    if (ip >= 5 && program.Skip(ip - 5).Take(5).All(instr => instr == Move.Idle))
+                    if (ip >= 4 && program.Skip(ip - 4).Take(4).All(instr => instr == Move.Idle))
                     {
                         result.DeathResult = DeathResult.Boredom;
                         return result;
