@@ -348,13 +348,6 @@ public class RibbitProgrammingScript : MonoBehaviour
             if (frogLane != null && frogLane >= 4)
                 result.FrogX = Math.Max(0, Math.Min(60, result.FrogX + _speeds[frogLane.Value]));
 
-            var prematureDeath = frogLane == null ? DeathResult.Survive : doesFrogDie(ip + 1, result.FrogX, frogLane.Value);
-            if (prematureDeath != DeathResult.Survive)
-            {
-                result.DeathResult = prematureDeath;
-                return result;
-            }
-
             switch (program[ip])
             {
                 case Move.Up:
@@ -611,11 +604,7 @@ public class RibbitProgrammingScript : MonoBehaviour
                 var programStr = queue.Dequeue();
 
                 program.Clear();
-                program.AddRange(programStr.Select(ch =>
-                    ch == 'U' ? Move.Up :
-                    ch == 'D' ? Move.Down :
-                    ch == 'L' ? Move.Left :
-                    ch == 'R' ? Move.Right : Move.Idle));
+                program.AddRange(programStr.Select(ch => (Move) "URDL-".IndexOf(ch)));
 
                 var initialResult = CheckProgram(program, program.Count, -1);
                 var visitedItem = new VisitedItem { Time = program.Count, FrogX = Mathf.RoundToInt(10 * initialResult.FrogX), FrogY = initialResult.FrogY };
@@ -636,15 +625,16 @@ public class RibbitProgrammingScript : MonoBehaviour
 
                     program.Add(nextMove);
 
-                    for (var fractionalTime = 0f; fractionalTime <= 1; fractionalTime += .25f)
-                    {
-                        var result = CheckProgram(program, program.Count + fractionalTime, -1);
-                        if (result.Solved)
-                            goto found;
+                    var result = CheckProgram(program, program.Count, -1);
+                    if (result.Solved)
+                        goto found;
+                    if (result.DeathResult != DeathResult.ProgramRanOut)
+                        goto busted;
 
-                        if (result.DeathResult != DeathResult.Survive && result.DeathResult != DeathResult.ProgramRanOut)
-                            goto busted;
-                    }
+                    if (result.FrogLane != null)
+                        for (var fractionalTime = 0; fractionalTime <= 4; fractionalTime++)
+                            if (doesFrogDie(program.Count + fractionalTime * .25f, result.FrogX, result.FrogLane.Value) != DeathResult.Survive)
+                                goto busted;
 
                     queue.Enqueue(program.Select(move => "URDL-"[(int) move]).Join(""));
 
